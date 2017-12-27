@@ -2728,7 +2728,13 @@ namespace Microsoft.PowerShell
                 }
             }
 
-            return str.Length - offset - escapeSequenceAdjustment;
+            var totalWidthInCells = 0;
+            for (int i = offset; i < str.Length; i++)
+            {
+                totalWidthInCells += LengthInBufferCells(str[i]);
+            }
+
+            return totalWidthInCells - escapeSequenceAdjustment;
         }
 
 #if !UNIX
@@ -2898,6 +2904,8 @@ namespace Microsoft.PowerShell
 
         #endregion helper
 
+#endif
+
         #region
 
         internal static int LengthInBufferCells(char c)
@@ -2924,6 +2932,8 @@ namespace Microsoft.PowerShell
         }
 
         #endregion
+
+#if !UNIX
 
         #region SendInput
 
