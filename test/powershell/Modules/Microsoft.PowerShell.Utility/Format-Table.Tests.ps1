@@ -812,4 +812,18 @@ A Name                                  B
             $output = [pscustomobject] @{ one = 1 } | Format-Table @{ l='one'; e='one'; width=10; alignment='center' } | Out-String
             $output.Replace("`r","").Replace(" ",".").Replace("`n","^") | Should -BeExactly $expectedTable.Replace("`r","").Replace(" ",".").Replace("`n","^")
         }
+
+    It "Format-Table should pad correct spaces for CJK characters" {
+        $obj1 = @{'軟' = "han"}
+        $obj2 = @{'ソフト' = "kana"}
+        $obj3 = @{'soft' = "ascii"}
+        $objs = New-Object System.Collections.ArrayList
+        $objs.Add($obj1)
+        $objs.Add($obj2)
+        $objs.Add($obj3)
+        $result = $objs | Format-Table -AutoSize -HideTableHeaders | Out-String
+        $result | Should -Match "軟     han"
+        $result | Should -Match "ソフト kana"
+        $result | Should -Match "soft   ascii"
     }
+}
