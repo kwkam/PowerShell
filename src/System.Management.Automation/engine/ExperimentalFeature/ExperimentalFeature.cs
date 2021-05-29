@@ -114,6 +114,9 @@ namespace System.Management.Automation
                     name: "PSCommandNotFoundSuggestion",
                     description: "Recommend potential commands based on fuzzy search on a CommandNotFoundException"),
                 new ExperimentalFeature(
+                    name: "PSWildcardEscapeEscape",
+                    description: "Fix WildcardPattern API: escape the escape character"),
+                new ExperimentalFeature(
                     name: "PSSubsystemPluginModel",
                     description: "A plugin model for registering and un-registering PowerShell subsystems"),
                 new ExperimentalFeature(
