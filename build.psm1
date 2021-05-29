@@ -355,11 +355,16 @@ function Start-PSBuild {
     }
 
     function Stop-DevPowerShell {
+        if (-not (Test-Path $script:Options.Output)) {
+            Write-Warning "Could not find dev powershell at '$($script:Options.Output)'"
+            return
+        }
+        $pwshDev = Resolve-Path $script:Options.Output
         Get-Process pwsh* |
             Where-Object {
                 $_.Modules |
                 Where-Object {
-                    $_.FileName -eq (Resolve-Path $script:Options.Output).Path
+                    $_.FileName -eq $pwshDev.Path
                 }
             } |
         Stop-Process -Verbose
@@ -367,8 +372,8 @@ function Start-PSBuild {
 
     if ($Clean) {
         Write-Log -message "Cleaning your working directory. You can also do it with 'git clean -fdX --exclude .vs/PowerShell/v16/Server/sqlite3'"
-        Push-Location $PSScriptRoot
         try {
+            Push-Location $PSScriptRoot
             # Excluded sqlite3 folder is due to this Roslyn issue: https://github.com/dotnet/roslyn/issues/23060
             # Excluded src/Modules/nuget.config as this is required for release build.
             # Excluded nuget.config as this is required for release build.
@@ -1114,8 +1119,9 @@ function Publish-PSTestTools {
     # Publish tools so it can be run by tests
     foreach ($tool in $tools)
     {
-        Push-Location $tool.Path
         try {
+            Push-Location $tool.Path
+
             $toolPath = Join-Path -Path $tool.Path -ChildPath "bin"
             $objPath = Join-Path -Path $tool.Path -ChildPath "obj"
 
@@ -2029,13 +2035,13 @@ function Start-PSBootstrap {
 
     Write-Log -message "Installing PowerShell build dependencies"
 
-    Push-Location $PSScriptRoot/tools
-
     if ($dotnetSDKVersionOveride) {
         $Version = $dotnetSDKVersionOveride
     }
 
     try {
+        Push-Location $PSScriptRoot/tools
+
         if ($environment.IsLinux -or $environment.IsMacOS) {
             # This allows sudo install to be optional; needed when running in containers / as root
             # Note that when it is null, Invoke-Expression (but not &) must be used to interpolate properly
@@ -2327,16 +2333,16 @@ function Start-TypeGen
     New-Item -ItemType Directory -Path (Split-Path -Path $GetDependenciesTargetPath -Parent) -Force > $null
     Set-Content -Path $GetDependenciesTargetPath -Value $GetDependenciesTargetValue -Force -Encoding Ascii
 
-    Push-Location "$PSScriptRoot/src/Microsoft.PowerShell.SDK"
     try {
+        Push-Location "$PSScriptRoot/src/Microsoft.PowerShell.SDK"
         $ps_inc_file = "$PSScriptRoot/src/TypeCatalogGen/$IncFileName"
         dotnet msbuild .\Microsoft.PowerShell.SDK.csproj /t:_GetDependencies "/property:DesignTimeBuild=true;_DependencyFile=$ps_inc_file" /nologo
     } finally {
         Pop-Location
     }
 
-    Push-Location "$PSScriptRoot/src/TypeCatalogGen"
     try {
+        Push-Location "$PSScriptRoot/src/TypeCatalogGen"
         dotnet run ../System.Management.Automation/CoreCLR/CorePsTypeCatalog.cs $IncFileName
     } finally {
         Pop-Location
@@ -2351,8 +2357,8 @@ function Start-ResGen
     # Add .NET CLI tools to PATH
     Find-Dotnet
 
-    Push-Location "$PSScriptRoot/src/ResGen"
     try {
+        Push-Location "$PSScriptRoot/src/ResGen"
         Start-NativeExecution { dotnet run } | Write-Verbose
     } finally {
         Pop-Location
