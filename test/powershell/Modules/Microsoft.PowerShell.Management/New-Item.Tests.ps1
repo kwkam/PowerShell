@@ -34,15 +34,16 @@ function Clean-State
 Describe "New-Item" -Tags "CI" {
     $tmpDirectory               = $TestDrive
     $testfile                   = "testfile.txt"
+    $testfileSp                 = "``[test``]file.txt"
     $testfolder                 = "newDirectory"
     $testsubfolder              = "newSubDirectory"
     $testlink                   = "testlink"
     $FullyQualifiedFile         = Join-Path -Path $tmpDirectory -ChildPath $testfile
+    $FullyQualifiedFileSp       = Join-Path -Path $tmpDirectory -ChildPath $testfileSp
     $FullyQualifiedFolder       = Join-Path -Path $tmpDirectory -ChildPath $testfolder
     $FullyQualifiedLink         = Join-Path -Path $tmpDirectory -ChildPath $testlink
     $FullyQualifiedSubFolder    = Join-Path -Path $FullyQualifiedFolder -ChildPath $testsubfolder
     $FullyQualifiedFileInFolder = Join-Path -Path $FullyQualifiedFolder -ChildPath $testfile
-
 
     BeforeEach {
         Clean-State
@@ -103,9 +104,15 @@ Describe "New-Item" -Tags "CI" {
         Test-Path $FullyQualifiedFile | Should -BeTrue
     }
 
+    It "Should create a file with correct name when Name switch is not used and Path contains special char" {
+        New-Item -Path $FullyQualifiedFileSp -ItemType file > $null
+
+        $FullyQualifiedFileSp | Should -Exist
+    }
+
     It "Should be able to create a multiple items in different directories" {
         $FullyQualifiedFile2 = Join-Path -Path $tmpDirectory -ChildPath test2.txt
-        New-Item -ItemType file -Path $FullyQualifiedFile, $FullyQualifiedFile2
+        New-Item -ItemType file -Path $FullyQualifiedFile, $FullyQualifiedFile2 > $null
 
         Test-Path $FullyQualifiedFile  | Should -BeTrue
         Test-Path $FullyQualifiedFile2 | Should -BeTrue
@@ -203,9 +210,15 @@ Describe "New-Item with links" -Tags @('CI', 'RequireAdminOnWindows') {
     $testfile             = "testfile.txt"
     $testfolder           = "newDirectory"
     $testlink             = "testlink"
+    $testlinkSrcSpName    = "[test]src"
+    $testlinkSrcSp        = "``[test``]src"
+    $testlinkSpName       = "[test]link"
+    $testlinkSp           = "``[test``]link"
     $FullyQualifiedFile   = Join-Path -Path $tmpDirectory -ChildPath $testfile
     $FullyQualifiedFolder = Join-Path -Path $tmpDirectory -ChildPath $testfolder
     $FullyQualifiedLink   = Join-Path -Path $tmpDirectory -ChildPath $testlink
+    $FullyQualifiedLSrcSp = Join-Path -Path $tmpDirectory -ChildPath $testlinkSrcSp
+    $FullyQualifiedLinkSp = Join-Path -Path $tmpDirectory -ChildPath $testlinkSp
     $SymLinkMask          = [System.IO.FileAttributes]::ReparsePoint
     $DirLinkMask          = $SymLinkMask -bor [System.IO.FileAttributes]::Directory
 
@@ -254,6 +267,21 @@ Describe "New-Item with links" -Tags @('CI', 'RequireAdminOnWindows') {
         Remove-Item $FullyQualifiedLink -Force
         # Test a code path removing a symbolic link (reparse point)
         Test-Path $FullyQualifiedLink | Should -BeFalse
+    }
+
+    It "Should create symbolic link with name contains special char" {
+        New-Item -Path $tmpDirectory -Name $testlinkSrcSpName -ItemType File > $null
+        $FullyQualifiedLSrcSp | Should -Exist
+
+        New-Item -Path $FullyQualifiedLinkSp -Target $FullyQualifiedLSrcSp -ItemType SymbolicLink > $null
+        $FullyQualifiedLinkSp | Should -Exist
+
+        $expectedTarget = Join-Path -Path $tmpDirectory -ChildPath $testlinkSrcSpName
+
+        $fileInfo = Get-Item -Path $FullyQualifiedLinkSp
+        $fileInfo.Target | Should -BeExactly $expectedTarget
+        $fileInfo.LinkType | Should -BeExactly "SymbolicLink"
+        $fileInfo.Attributes -band $DirLinkMask | Should -BeExactly $SymLinkMask
     }
 
     It "New-Item -ItemType SymbolicLink should understand directory path ending with slash" {

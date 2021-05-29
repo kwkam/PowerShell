@@ -3435,7 +3435,7 @@ namespace System.Management.Automation
                 if (string.IsNullOrEmpty(name))
                 {
                     string providerPath =
-                        Globber.GetProviderPath(resolvePath, context, out provider, out driveInfo);
+                        Globber.GetProviderPath(WildcardPattern.Unescape(resolvePath), context, out provider, out driveInfo);
 
                     providerInstance = GetProviderInstance(provider);
                     providerPaths.Add(providerPath);
@@ -3522,9 +3522,14 @@ namespace System.Management.Automation
                             throw PSTraceSource.NewInvalidOperationException(SessionStateStrings.PathNotFound, targetPath);
                         }
 
-                        // If the original target was a relative path, we want to leave it as relative if it did not require
-                        // globbing to resolve.
-                        if (WildcardPattern.ContainsWildcardCharacters(targetPath))
+                        // If the original target was a relative path, we want to leave it as relative
+                        if (targetPath.StartsWith('.'))
+                        {
+                            var sessionState = ExecutionContext.EngineSessionState;
+                            string resolvedPath = sessionState.NormalizeRelativePath(globbedTarget[0], sessionState.CurrentLocation.ProviderPath);
+                            content = resolvedPath.StartsWith('.') ? resolvedPath : Path.Combine(".", resolvedPath);
+                        }
+                        else
                         {
                             content = globbedTarget[0];
                         }
